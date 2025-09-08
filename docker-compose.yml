@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  fitness-tracker:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=your_jwt_secret_here
+      - FIREBASE_PROJECT_ID=fitness-tracker-471206
+    volumes:
+      - ./service-account-key.json:/usr/src/app/service-account-key.json:ro
+    restart: unless-stopped
