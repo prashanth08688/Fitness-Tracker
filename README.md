@@ -3,6 +3,15 @@ Fitness Tracker - Project Documentation
 Overview  
 The Fitness Tracker is a full-stack web application that allows users to track workouts, monitor progress with charts, and analyze fitness data. It includes user authentication, workout management, and data visualization.
 
+Team Roles 
+02-coding
+06- Jenkins
+18-deployment kubernet
+33-docker
+34-git
+42-coding
+Le 4-testing
+
 Technical Architecture
 
 Frontend  
@@ -134,3 +143,4 @@ Error Handling
 Includes handling for database, authentication, input, network, and authorization errors.
 
 This Fitness Tracker provides a foundation for tracking workouts and progress, with potential for expansion.
+
