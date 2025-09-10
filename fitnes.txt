@@ -1,0 +1,177 @@
+# Fitness Tracker - Project Documentation
+
+## Overview
+The Fitness Tracker is a full-stack web application that allows users to track their workouts, monitor progress through visual charts, and analyze their fitness data. The application features user authentication, workout management, and data visualization capabilities.
+
+## Technical Architecture
+
+### Frontend
+- **HTML5/CSS3/JavaScript**: Pure frontend implementation without frameworks
+- **Chart.js**: For data visualization and progress tracking
+- **Responsive Design**: Works on both desktop and mobile devices
+
+### Backend
+- **Node.js**: Runtime environment
+- **Express.js**: Web application framework
+- **Firebase Firestore**: NoSQL database for data persistence
+- **Firebase Admin SDK**: Server-side Firebase integration
+
+### Authentication & Security
+- **JSON Web Tokens (JWT)**: For secure user authentication
+- **bcrypt**: For password hashing and security
+- **CORS**: Enabled for cross-origin requests
+
+## Project Structure
+
+```
+fitness-tracker/
+├── app.js                 # Main application entry point
+├── package.json           # Project dependencies and scripts
+├── package-lock.json      # Locked dependency versions
+├── service-account-key.json # Firebase service account credentials
+├── auth.js               # Authentication routes and logic
+├── middleware.js         # JWT authentication middleware
+├── firebase.js           # Firebase/Firestore database operations
+├── workout.js            # Workout-related API routes
+├── index.html            # Main dashboard page
+├── login.html            # User login page
+├── signup.html           # User registration page
+└── .env                  # Environment variables (not included in files)
+```
+
+## Key Features
+
+### 1. User Authentication
+- User registration with username, email, and password
+- User login with username/email and password
+- JWT-based session management
+- Secure password storage using bcrypt hashing
+
+### 2. Workout Management
+- Add new workouts with type, duration, and automatic calorie calculation
+- View recent workouts on dashboard
+- Search workouts by specific date
+- Delete existing workouts
+- Workout types include:
+  - Running, Cycling, Swimming, Weightlifting
+  - Yoga, Jump Rope, Basketball, Tennis
+  - Boxing, Dancing
+
+### 3. Data Visualization
+- Progress chart showing calories burned over the last 7 days
+- Statistics dashboard with:
+  - Total workouts
+  - Total calories burned
+  - Average calories per session
+
+### 4. Responsive Design
+- Mobile-friendly interface
+- Clean, modern UI with gradient headers and card-based layout
+
+## API Endpoints
+
+### Authentication Routes (`/api/auth`)
+- `POST /signup` - Create a new user account
+- `POST /login` - Authenticate user and return JWT
+
+### Workout Routes (`/api/workouts`) - Protected
+- `POST /` - Create a new workout
+- `GET /` - Get all workouts for authenticated user
+- `GET /recent` - Get limited recent workouts (default: 3)
+- `GET /by-date?date=YYYY-MM-DD` - Get workouts for specific date
+- `DELETE /:id` - Delete a specific workout
+
+## Database Schema
+
+### Users Collection
+```javascript
+{
+  username: string,
+  email: string,
+  password: string (hashed),
+  createdAt: timestamp
+}
+```
+
+### Workouts Collection
+```javascript
+{
+  userId: string (reference to users),
+  type: string,
+  duration: number (minutes),
+  calories: number (calculated),
+  date: timestamp,
+  createdAt: timestamp
+}
+```
+
+## Calorie Calculation
+The application uses fixed metabolic equivalents (MET) values for different activities:
+- Running: 8.3 calories/minute
+- Cycling: 7.0 calories/minute
+- Swimming: 6.0 calories/minute
+- Weightlifting: 3.0 calories/minute
+- Yoga: 2.5 calories/minute
+- Jump Rope: 10.0 calories/minute
+- Basketball: 6.0 calories/minute
+- Tennis: 5.0 calories/minute
+- Boxing: 7.0 calories/minute
+- Dancing: 4.5 calories/minute
+
+Calories = MET value × duration in minutes
+
+## Security Measures
+1. Passwords are hashed with bcrypt (salt rounds: 10)
+2. JWT tokens expire after 1 hour
+3. Protected routes require valid JWT in Authorization header
+4. Input validation on both client and server sides
+5. CORS configured for controlled cross-origin requests
+
+## Deployment Considerations
+
+### Environment Variables
+The application requires the following environment variables:
+- `JWT_SECRET`: Secret key for signing JWTs
+- `FIREBASE_PROJECT_ID`: Firebase project identifier
+- `PORT`: Server port (default: 3000)
+
+### Firebase Setup
+1. Create a Firebase project
+2. Enable Firestore database
+3. Generate a service account key
+4. Place the key file as `service-account-key.json`
+
+### Installation and Running
+```bash
+# Install dependencies
+npm install
+
+# Start the application
+npm start
+```
+
+## Potential Enhancements
+1. Social features (friend system, sharing workouts)
+2. More detailed workout tracking (sets, reps, distance)
+3. Integration with wearable devices
+4. Email notifications and reminders
+5. Advanced analytics and reporting
+6. Workout plans and schedules
+7. Photo upload for progress tracking
+
+## Browser Compatibility
+The application should work on all modern browsers that support:
+- ES6+ JavaScript features
+- HTML5 form validation
+- CSS Flexbox and Grid
+- Canvas API (for charts)
+
+## Error Handling
+The application includes comprehensive error handling for:
+- Database operations
+- Authentication failures
+- Invalid input data
+- Network issues
+- Authorization errors
+
+This Fitness Tracker application provides a solid foundation for tracking workout activities and visualizing progress, with potential for expansion into a more comprehensive fitness management platform.
