@@ -2,15 +2,11 @@ pipeline {
     agent any
 
     tools {
-jenkins-ci
         nodejs "node18"   // must match the Tools->NodeJS name you configured
     }
 
     environment {
         GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for your PAT
-
-        nodejs "node18"
- dev
     }
 
     stages {
@@ -18,37 +14,24 @@ jenkins-ci
             steps {
                 git branch: 'dev',
                     url: 'https://github.com/prashanth08688/Fitness-Tracker.git',
- jenkins-ci
                     credentialsId: "${GIT_CRED}"
             }
         }
 
-        stage('Install Node deps') {
-                    credentialsId: 'Fitness-TrackerCred'
-            }
-        }
-
-        stage('Install Dependencies') {
-          dev
+        stage('Install Node dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
-        jenkins-ci
-        stage('Build check') {
-
         stage('Build Check') {
-            dev
             steps {
                 bat 'node -c app.js'
             }
         }
-        jenkins-ci
 
         stage('Start server (background)') {
             steps {
-                // Start node app in background and write PID to server.pid
                 bat '''
                 powershell -Command "$p = Start-Process -FilePath node -ArgumentList 'app.js' -PassThru; $p.Id | Out-File -FilePath server.pid -Encoding ascii"
                 powershell -Command "Write-Output 'Waiting for server to be ready...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server is up'"
@@ -99,18 +82,11 @@ jenkins-ci
     }
 
     post {
-        success { echo '✅ Build, tests and merge completed successfully.' }
-        failure { echo '❌ Pipeline failed — check console output.' }
-
-    }
-
-    post {
         success {
-            echo '✅ Build successful. Notify Tester.'
+            echo '✅ Build, tests and merge completed successfully.'
         }
         failure {
-            echo '❌ Build failed. Developers must fix.'
+            echo '❌ Pipeline failed — check console output.'
         }
- dev
     }
 }
