@@ -7,7 +7,7 @@ jenkins-ci
     }
 
     environment {
-        GIT_CRED = 'github-token'   // Jenkins credential ID for your PAT
+        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for your PAT
 
         nodejs "node18"
  dev
