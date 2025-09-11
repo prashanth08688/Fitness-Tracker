@@ -2,56 +2,40 @@ pipeline {
     agent any
 
     tools {
-jenkins-ci
-        nodejs "node18"   // must match the Tools->NodeJS name you configured
+        nodejs "node18"   // must match the NodeJS tool name in Jenkins -> Global Tool Config
     }
 
     environment {
-        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for your PAT
-
-        nodejs "node18"
- dev
+        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID (your GitHub PAT)
     }
 
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'dev',
-                    url: 'https://github.com/prashanth08688/Fitness-Tracker.git',
- jenkins-ci
-                    credentialsId: "${GIT_CRED}"
+                    credentialsId: "${GIT_CRED}",
+                    url: 'https://github.com/prashanth08688/Fitness-Tracker.git'
             }
         }
 
-        stage('Install Node deps') {
-                    credentialsId: 'Fitness-TrackerCred'
-            }
-        }
-
-        stage('Install Dependencies') {
-          dev
+        stage('Install Node dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
-        jenkins-ci
-        stage('Build check') {
-
         stage('Build Check') {
-            dev
             steps {
                 bat 'node -c app.js'
             }
         }
-        jenkins-ci
 
         stage('Start server (background)') {
             steps {
-                // Start node app in background and write PID to server.pid
+                // start Node.js server in background
                 bat '''
                 powershell -Command "$p = Start-Process -FilePath node -ArgumentList 'app.js' -PassThru; $p.Id | Out-File -FilePath server.pid -Encoding ascii"
-                powershell -Command "Write-Output 'Waiting for server to be ready...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server is up'"
+                powershell -Command "Write-Output 'Waiting for server...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server ready.'"
                 '''
             }
         }
@@ -62,8 +46,14 @@ jenkins-ci
                 python -m venv venv
                 call venv\\Scripts\\activate
                 pip install -r tests/requirements.txt
-                pytest tests/ -q --maxfail=1 --disable-warnings
+                pytest tests/ -q --maxfail=1 --disable-warnings --junitxml=report.xml
                 '''
+            }
+            post {
+                always {
+                    // publish JUnit report in Jenkins UI
+                    junit 'report.xml'
+                }
             }
         }
 
@@ -99,18 +89,7 @@ jenkins-ci
     }
 
     post {
-        success { echo '✅ Build, tests and merge completed successfully.' }
-        failure { echo '❌ Pipeline failed — check console output.' }
-
-    }
-
-    post {
-        success {
-            echo '✅ Build successful. Notify Tester.'
-        }
-        failure {
-            echo '❌ Build failed. Developers must fix.'
-        }
- dev
+        success { echo '✅ Build, tests, and merge completed successfully.' }
+        failure { echo '❌ Pipeline failed — check console + test reports.' }
     }
 }
