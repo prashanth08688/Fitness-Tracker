@@ -2,11 +2,15 @@ pipeline {
     agent any
 
     tools {
+jenkins-ci
         nodejs "node18"   // must match the Tools->NodeJS name you configured
     }
 
     environment {
         GIT_CRED = 'github-token'   // Jenkins credential ID for your PAT
+
+        nodejs "node18"
+ dev
     }
 
     stages {
@@ -14,21 +18,33 @@ pipeline {
             steps {
                 git branch: 'dev',
                     url: 'https://github.com/prashanth08688/Fitness-Tracker.git',
+ jenkins-ci
                     credentialsId: "${GIT_CRED}"
             }
         }
 
         stage('Install Node deps') {
+                    credentialsId: 'Fitness-TrackerCred'
+            }
+        }
+
+        stage('Install Dependencies') {
+          dev
             steps {
                 bat 'npm install'
             }
         }
 
+        jenkins-ci
         stage('Build check') {
+
+        stage('Build Check') {
+            dev
             steps {
                 bat 'node -c app.js'
             }
         }
+        jenkins-ci
 
         stage('Start server (background)') {
             steps {
@@ -85,5 +101,16 @@ pipeline {
     post {
         success { echo '✅ Build, tests and merge completed successfully.' }
         failure { echo '❌ Pipeline failed — check console output.' }
+
+    }
+
+    post {
+        success {
+            echo '✅ Build successful. Notify Tester.'
+        }
+        failure {
+            echo '❌ Build failed. Developers must fix.'
+        }
+ dev
     }
 }
