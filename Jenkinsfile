@@ -47,6 +47,7 @@ pipeline {
 
         stage('Start server (background)') {
             steps {
+                // Start Node.js server in background
                 bat '''
                 powershell -Command "$p = Start-Process -FilePath node -ArgumentList 'app.js' -PassThru; $p.Id | Out-File -FilePath server.pid -Encoding ascii"
                 powershell -Command "Write-Output 'Waiting for server...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server ready.'"
