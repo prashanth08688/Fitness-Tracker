@@ -1,6 +1,4 @@
 selenium
 pytest
-pytest-html
-pytest-jenkins
 webdriver-manager
-
+pytest-html
