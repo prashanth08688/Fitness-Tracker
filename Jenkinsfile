@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for GitHub PAT
+        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for GitHub PT
 
         // Inject environment variables from Jenkins Credentials
         PORT                       = '3000'
