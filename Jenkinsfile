@@ -2,30 +2,15 @@ pipeline {
     agent any
 
     tools {
-        nodejs "node18"   // Must match your NodeJS name in Jenkins -> Global Tool Config
+        nodejs "node18"   // must match Jenkins -> Global Tool Config
     }
 
     environment {
-        GIT_CRED = 'Fitness-TrackerCred'   // Jenkins credential ID for GitHub PAT
-
-        // Inject environment variables from Jenkins Credentials
-        PORT                       = '3000'
-        JWT_SECRET                 = credentials('jwt-secret')
-        FIREBASE_TYPE              = 'service_account'
-        FIREBASE_PROJECT_ID        = credentials('firebase-project-id')
-        FIREBASE_PRIVATE_KEY_ID    = credentials('firebase-private-key-id')
-        FIREBASE_PRIVATE_KEY       = credentials('firebase-private-key')
-        FIREBASE_CLIENT_EMAIL      = credentials('firebase-client-email')
-        FIREBASE_CLIENT_ID         = credentials('firebase-client-id')
-        FIREBASE_AUTH_URI          = 'https://accounts.google.com/o/oauth2/auth'
-        FIREBASE_TOKEN_URI         = 'https://oauth2.googleapis.com/token'
-        FIREBASE_AUTH_PROVIDER_X509_CERT_URL = 'https://www.googleapis.com/oauth2/v1/certs'
-        FIREBASE_CLIENT_X509_CERT_URL       = credentials('firebase-client-cert-url')
-        FIREBASE_UNIVERSE_DOMAIN   = 'googleapis.com'
+        GIT_CRED = 'Fitness-TrackerCred'   // GitHub PAT (username + token)
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout dev') {
             steps {
                 git branch: 'dev',
                     url: 'https://github.com/prashanth08688/Fitness-Tracker.git',
@@ -47,11 +32,20 @@ pipeline {
 
         stage('Start server (background)') {
             steps {
-                // Start Node.js server in background
-                bat '''
-                powershell -Command "$p = Start-Process -FilePath node -ArgumentList 'app.js' -PassThru; $p.Id | Out-File -FilePath server.pid -Encoding ascii"
-                powershell -Command "Write-Output 'Waiting for server...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server ready.'"
-                '''
+                withCredentials([
+                    string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
+                    string(credentialsId: 'firebase-project-id', variable: 'FIREBASE_PROJECT_ID'),
+                    string(credentialsId: 'firebase-private-key-id', variable: 'FIREBASE_PRIVATE_KEY_ID'),
+                    string(credentialsId: 'firebase-private-key', variable: 'FIREBASE_PRIVATE_KEY'),
+                    string(credentialsId: 'firebase-client-email', variable: 'FIREBASE_CLIENT_EMAIL'),
+                    string(credentialsId: 'firebase-client-id', variable: 'FIREBASE_CLIENT_ID'),
+                    string(credentialsId: 'firebase-client-cert-url', variable: 'FIREBASE_CLIENT_X509_CERT_URL')
+                ]) {
+                    bat '''
+                    powershell -Command "$p = Start-Process -FilePath node -ArgumentList 'app.js' -PassThru; $p.Id | Out-File -FilePath server.pid -Encoding ascii"
+                    powershell -Command "Write-Output 'Waiting for server...'; while(-not (Test-NetConnection -ComputerName 'localhost' -Port 3000).TcpTestSucceeded){Start-Sleep -Seconds 1}; Write-Output 'Server ready.'"
+                    '''
+                }
             }
         }
 
@@ -82,7 +76,7 @@ pipeline {
             }
         }
 
-        stage('Merge dev -> main (auto)') {
+        stage('Sync dev -> main') {
             when {
                 expression { currentBuild.currentResult == "SUCCESS" }
             }
@@ -92,10 +86,9 @@ pipeline {
                     git config user.email "ci-bot@example.com"
                     git config user.name "Jenkins CI Bot"
                     git fetch origin
-                    git checkout main
-                    git pull origin main
-                    git merge origin/dev --no-edit
-                    git push https://%GIT_USER%:%GIT_TOKEN%@github.com/prashanth08688/Fitness-Tracker.git main
+                    git checkout dev
+                    git pull origin dev
+                    git push https://%GIT_USER%:%GIT_TOKEN%@github.com/prashanth08688/Fitness-Tracker.git dev:main --force
                     """
                 }
             }
@@ -104,10 +97,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build, tests, and merge completed successfully.'
+            echo '✅ Build, tests passed — dev synced to main'
         }
         failure {
-            echo '❌ Pipeline failed — check console + test reports.'
+            echo '❌ Build/tests failed — main not updated'
         }
     }
 }
