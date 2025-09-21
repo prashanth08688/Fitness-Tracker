@@ -44,6 +44,19 @@
             background: #222;
             color: white;
             font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: #4facfe;
+            outline: none;
+        }
+        input.valid {
+            border-color: #4caf50;
+        }
+        input.invalid {
+            border-color: #ff6b6b;
         }
         input[type="submit"] {
             width: 100%;
@@ -60,10 +73,15 @@
         input[type="submit"]:hover {
             background: #367bd9;
         }
+        input[type="submit"]:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
         .error {
             color: #ff6b6b;
             font-size: 0.9em;
             margin-bottom: 10px;
+            min-height: 20px;
         }
         .signup-link {
             text-align: center;
@@ -83,7 +101,7 @@
     <div class="login-container">
         <h2>Login to Your Account</h2>
         <form id="loginForm" novalidate>
-            <label for="usernameOrEmail">Username or Email</label>
+            <label for="usernameOrEmail">Email</label>
             <input type="text" id="usernameOrEmail" name="usernameOrEmail" required />
             <div id="usernameOrEmailError" class="error"></div>
 
@@ -91,7 +109,7 @@
             <input type="password" id="password" name="password" required />
             <div id="passwordError" class="error"></div>
 
-            <input type="submit" value="Login" />
+            <input type="submit" value="Login" id="submitButton" />
         </form>
         <div class="signup-link">
             Don't have an account? <a href="signup.html">Sign up here</a>
@@ -100,60 +118,154 @@
 
     <script>
     const loginForm = document.getElementById('loginForm');
+    const submitButton = document.getElementById('submitButton');
+    
+    // Form fields
+    const usernameOrEmailField = document.getElementById('usernameOrEmail');
+    const passwordField = document.getElementById('password');
+    
+    // Error elements
+    const usernameOrEmailError = document.getElementById('usernameOrEmailError');
+    const passwordError = document.getElementById('passwordError');
 
-    function showError(elementId, message) {
-        document.getElementById(elementId).textContent = message;
+    // Validation functions
+    function validateUsernameOrEmail() {
+        const usernameOrEmail = usernameOrEmailField.value.trim();
+        
+        if (usernameOrEmail.length === 0) {
+            showError(usernameOrEmailField, usernameOrEmailError, 'Username or email is required.');
+            return false;
+        }
+        
+        // Check if it's an email
+        if (usernameOrEmail.includes('@')) {
+            if (!usernameOrEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                showError(usernameOrEmailField, usernameOrEmailError, 'Please enter a valid email address.');
+                return false;
+            }
+        } else {
+            // Validate username
+            if (usernameOrEmail.length < 3) {
+                showError(usernameOrEmailField, usernameOrEmailError, 'Username must be at least 3 characters.');
+                return false;
+            }
+            
+            if (!/^[a-zA-Z0-9_]+$/.test(usernameOrEmail)) {
+                showError(usernameOrEmailField, usernameOrEmailError, 'Username can only contain letters, numbers, and underscores.');
+                return false;
+            }
+        }
+        
+        showSuccess(usernameOrEmailField, usernameOrEmailError);
+        return true;
     }
 
-    function clearErrors() {
-        showError('usernameOrEmailError', '');
-        showError('passwordError', '');
+    function validatePassword() {
+        const password = passwordField.value;
+        
+        if (password.length === 0) {
+            showError(passwordField, passwordError, 'Password is required.');
+            return false;
+        }
+        
+        showSuccess(passwordField, passwordError);
+        return true;
     }
 
+    function showError(field, errorElement, message) {
+        field.classList.add('invalid');
+        field.classList.remove('valid');
+        errorElement.textContent = message;
+    }
+
+    function showSuccess(field, errorElement) {
+        field.classList.remove('invalid');
+        field.classList.add('valid');
+        errorElement.textContent = '';
+    }
+
+    function clearValidation() {
+        const fields = [usernameOrEmailField, passwordField];
+        const errorElements = [usernameOrEmailError, passwordError];
+        
+        fields.forEach(field => {
+            field.classList.remove('invalid');
+            field.classList.remove('valid');
+        });
+        
+        errorElements.forEach(errorElement => {
+            errorElement.textContent = '';
+        });
+    }
+
+    function validateForm() {
+        const isUsernameOrEmailValid = validateUsernameOrEmail();
+        const isPasswordValid = validatePassword();
+        
+        return isUsernameOrEmailValid && isPasswordValid;
+    }
+
+    // Event listeners
+    usernameOrEmailField.addEventListener('input', validateUsernameOrEmail);
+    usernameOrEmailField.addEventListener('blur', validateUsernameOrEmail);
+    
+    passwordField.addEventListener('input', validatePassword);
+    passwordField.addEventListener('blur', validatePassword);
+    
     loginForm.addEventListener('submit', function(event) {
         event.preventDefault();
-        clearErrors();
-
-        const usernameOrEmail = loginForm.usernameOrEmail.value.trim();
-        const password = loginForm.password.value;
-
-        let valid = true;
-
-        if (!usernameOrEmail) {
-            showError('usernameOrEmailError', 'Please enter your username or email.');
-            valid = false;
+        
+        if (validateForm()) {
+            // Disable submit button to prevent multiple submissions
+            submitButton.disabled = true;
+            submitButton.value = 'Logging in...';
+            
+            const usernameOrEmail = usernameOrEmailField.value.trim();
+            const password = passwordField.value;
+            
+            // Call backend API
+            fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usernameOrEmail, password })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => {
+                        throw new Error(data.message || 'Login failed');
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('username', data.username);
+                    alert("Login successful! Redirecting to dashboard...");
+                    window.location.href = 'index.html';
+                } else {
+                    throw new Error(data.message || "Invalid credentials");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                
+                // Show appropriate error message
+                if (err.message.includes('credentials') || err.message.includes('Invalid')) {
+                    showError(usernameOrEmailField, usernameOrEmailError, 'Invalid username/email or password');
+                    showError(passwordField, passwordError, 'Invalid username/email or password');
+                } else {
+                    alert("Login failed. Please try again.");
+                }
+                
+                submitButton.disabled = false;
+                submitButton.value = 'Login';
+            });
         }
-
-        if (!password) {
-            showError('passwordError', 'Please enter your password.');
-            valid = false;
-        }
-
-        if (!valid) return;
-
-        // ✅ Call backend API
-        fetch('http://localhost:3000/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernameOrEmail, password })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('username', data.username);
-                alert("Login successful! Redirecting to dashboard...");
-                window.location.href = 'index.html';
-            } else {
-                alert("Login failed: " + (data.message || "Invalid credentials"));
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Login failed. Please try again.");
-        });
     });
-</script>
 
+    // Initialize form state
+    clearValidation();
+    </script>
 </body>
 </html>
