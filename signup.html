@@ -44,6 +44,19 @@
             background: #222;
             color: white;
             font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: #4facfe;
+            outline: none;
+        }
+        input.valid {
+            border-color: #4caf50;
+        }
+        input.invalid {
+            border-color: #ff6b6b;
         }
         input[type="submit"] {
             width: 100%;
@@ -60,10 +73,15 @@
         input[type="submit"]:hover {
             background: #367bd9;
         }
+        input[type="submit"]:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
         .error {
             color: #ff6b6b;
             font-size: 0.9em;
             margin-bottom: 10px;
+            min-height: 20px;
         }
         .login-link {
             text-align: center;
@@ -76,6 +94,20 @@
         }
         .login-link a:hover {
             text-decoration: underline;
+        }
+        .password-strength {
+            margin-top: -10px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+        }
+        .strength-weak {
+            color: #ff6b6b;
+        }
+        .strength-medium {
+            color: #ffa700;
+        }
+        .strength-strong {
+            color: #4caf50;
         }
     </style>
 </head>
@@ -92,14 +124,15 @@
             <div id="emailError" class="error"></div>
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required minlength="6" />
+            <input type="password" id="password" name="password" required minlength="8" />
+            <div id="passwordStrength" class="password-strength"></div>
             <div id="passwordError" class="error"></div>
 
             <label for="confirmPassword">Confirm Password</label>
             <input type="password" id="confirmPassword" name="confirmPassword" required />
             <div id="confirmPasswordError" class="error"></div>
 
-            <input type="submit" value="Sign Up" />
+            <input type="submit" value="Sign Up" id="submitButton" />
         </form>
         <div class="login-link">
             Already have an account? <a href="login.html">Login here</a>
@@ -108,91 +141,257 @@
 
     <script>
     const signupForm = document.getElementById('signupForm');
+    const submitButton = document.getElementById('submitButton');
+    
+    // Form fields
+    const usernameField = document.getElementById('username');
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirmPassword');
+    
+    // Error elements
+    const usernameError = document.getElementById('usernameError');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+    const passwordStrength = document.getElementById('passwordStrength');
 
-    function showError(elementId, message) {
-        document.getElementById(elementId).textContent = message;
+    // Validation functions
+    function validateUsername() {
+        const username = usernameField.value.trim();
+        
+        if (username.length === 0) {
+            showError(usernameField, usernameError, 'Username is required.');
+            return false;
+        }
+        
+        if (username.length < 3 || username.length > 20) {
+            showError(usernameField, usernameError, 'Username must be between 3 and 20 characters.');
+            return false;
+        }
+        
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            showError(usernameField, usernameError, 'Username can only contain letters, numbers, and underscores.');
+            return false;
+        }
+        
+        showSuccess(usernameField, usernameError);
+        return true;
     }
 
-    function clearErrors() {
-        showError('usernameError', '');
-        showError('emailError', '');
-        showError('passwordError', '');
-        showError('confirmPasswordError', '');
+    function validateEmail() {
+        const email = emailField.value.trim();
+        
+        if (email.length === 0) {
+            showError(emailField, emailError, 'Email is required.');
+            return false;
+        }
+        
+        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            showError(emailField, emailError, 'Please enter a valid email address.');
+            return false;
+        }
+        
+        showSuccess(emailField, emailError);
+        return true;
     }
 
+    function validatePassword() {
+        const password = passwordField.value;
+        
+        if (password.length === 0) {
+            showError(passwordField, passwordError, 'Password is required.');
+            updatePasswordStrength('');
+            return false;
+        }
+        
+        if (password.length < 8) {
+            showError(passwordField, passwordError, 'Password must be at least 8 characters.');
+            updatePasswordStrength(password);
+            return false;
+        }
+        
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+            let errorMsg = 'Password must contain:';
+            if (!hasUpperCase) errorMsg += ' one uppercase letter,';
+            if (!hasLowerCase) errorMsg += ' one lowercase letter,';
+            if (!hasNumber) errorMsg += ' one number,';
+            if (!hasSpecialChar) errorMsg += ' one special character,';
+            
+            // Remove trailing comma
+            errorMsg = errorMsg.slice(0, -1);
+            
+            showError(passwordField, passwordError, errorMsg);
+            updatePasswordStrength(password);
+            return false;
+        }
+        
+        showSuccess(passwordField, passwordError);
+        updatePasswordStrength(password);
+        return true;
+    }
+
+    function validateConfirmPassword() {
+        const password = passwordField.value;
+        const confirmPassword = confirmPasswordField.value;
+        
+        if (confirmPassword.length === 0) {
+            showError(confirmPasswordField, confirmPasswordError, 'Please confirm your password.');
+            return false;
+        }
+        
+        if (password !== confirmPassword) {
+            showError(confirmPasswordField, confirmPasswordError, 'Passwords do not match.');
+            return false;
+        }
+        
+        showSuccess(confirmPasswordField, confirmPasswordError);
+        return true;
+    }
+
+    function updatePasswordStrength(password) {
+        if (!password) {
+            passwordStrength.textContent = '';
+            return;
+        }
+        
+        let strength = 0;
+        let message = '';
+        let className = '';
+        
+        // Length check
+        if (password.length >= 8) strength++;
+        if (password.length >= 12) strength++;
+        
+        // Character variety checks
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        if (strength < 4) {
+            message = 'Weak password';
+            className = 'strength-weak';
+        } else if (strength < 6) {
+            message = 'Medium password';
+            className = 'strength-medium';
+        } else {
+            message = 'Strong password';
+            className = 'strength-strong';
+        }
+        
+        passwordStrength.textContent = message;
+        passwordStrength.className = 'password-strength ' + className;
+    }
+
+    function showError(field, errorElement, message) {
+        field.classList.add('invalid');
+        field.classList.remove('valid');
+        errorElement.textContent = message;
+    }
+
+    function showSuccess(field, errorElement) {
+        field.classList.remove('invalid');
+        field.classList.add('valid');
+        errorElement.textContent = '';
+    }
+
+    function clearValidation() {
+        const fields = [usernameField, emailField, passwordField, confirmPasswordField];
+        const errorElements = [usernameError, emailError, passwordError, confirmPasswordError];
+        
+        fields.forEach(field => {
+            field.classList.remove('invalid');
+            field.classList.remove('valid');
+        });
+        
+        errorElements.forEach(errorElement => {
+            errorElement.textContent = '';
+        });
+        
+        passwordStrength.textContent = '';
+    }
+
+    function validateForm() {
+        const isUsernameValid = validateUsername();
+        const isEmailValid = validateEmail();
+        const isPasswordValid = validatePassword();
+        const isConfirmPasswordValid = validateConfirmPassword();
+        
+        return isUsernameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid;
+    }
+
+    // Event listeners
+    usernameField.addEventListener('input', validateUsername);
+    usernameField.addEventListener('blur', validateUsername);
+    
+    emailField.addEventListener('input', validateEmail);
+    emailField.addEventListener('blur', validateEmail);
+    
+    passwordField.addEventListener('input', function() {
+        validatePassword();
+        // Also validate confirm password when password changes
+        if (confirmPasswordField.value.length > 0) {
+            validateConfirmPassword();
+        }
+    });
+    passwordField.addEventListener('blur', validatePassword);
+    
+    confirmPasswordField.addEventListener('input', validateConfirmPassword);
+    confirmPasswordField.addEventListener('blur', validateConfirmPassword);
+    
     signupForm.addEventListener('submit', function(event) {
         event.preventDefault();
-        clearErrors();
-
-        const username = signupForm.username.value.trim();
-        const email = signupForm.email.value.trim();
-        const password = signupForm.password.value;
-        const confirmPassword = signupForm.confirmPassword.value;
-
-        let valid = true;
-
-        if (username.length < 3 || username.length > 20) {
-            showError('usernameError', 'Username must be between 3 and 20 characters.');
-            valid = false;
+        
+        if (validateForm()) {
+            // Disable submit button to prevent multiple submissions
+            submitButton.disabled = true;
+            submitButton.value = 'Signing Up...';
+            
+            const username = usernameField.value.trim();
+            const email = emailField.value.trim();
+            const password = passwordField.value;
+            
+            // Call backend API
+            fetch('http://localhost:3000/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => {
+                        throw new Error(data.message || 'Signup failed');
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.token) {
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("username", data.username);
+                    alert("Signup successful! Redirecting to dashboard...");
+                    window.location.href = 'index.html';
+                } else {
+                    throw new Error(data.message || "Unknown error");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Signup failed: " + err.message);
+                submitButton.disabled = false;
+                submitButton.value = 'Sign Up';
+            });
         }
-
-        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-            showError('emailError', 'Please enter a valid email address.');
-            valid = false;
-        }
-
-        if (password.length < 8) {
-            showError('passwordError', 'Password must be at least 8 characters.');
-            valid = false;
-        } 
-        if (!/[A-Z]/.test(password)) {
-            showError('passwordError', 'Password must contain at least one uppercase letter.');
-            valid = false;
-        }
-        if (!/[a-z]/.test(password)) {
-            showError('passwordError', 'Password must contain at least one lowercase letter.');
-            valid = false;
-        }
-        if (!/[0-9]/.test(password)) {
-            showError('passwordError', 'Password must contain at least one number.');
-            valid = false;
-        }
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-            showError('passwordError', 'Password must contain at least one special character.');
-            valid = false;
-        }
-
-        if (password !== confirmPassword) {
-            showError('confirmPasswordError', 'Password do not match.');
-            valid = false;
-        }
-
-        if (!valid) return;
-
-        // ✅ Call backend API
-        fetch('http://localhost:3000/api/auth/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.token) {
-                localStorage.setItem("token", data.token);
-                localStorage.setItem("username", data.username);
-                alert("Signup successful! Redirecting to dashboard...");
-                window.location.href = 'index.html';
-            } else {
-                alert("Signup failed: " + (data.message || "Unknown error"));
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Signup failed. Please try again.");
-        });
     });
-</script>
 
+    // Initialize form state
+    clearValidation();
+    </script>
 </body>
 </html>
-
